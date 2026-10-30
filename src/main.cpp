@@ -3,6 +3,12 @@
 #include <thread>
 #include <random>
 #include <map>
+#include <unistd.h>
+#include <termios.h>
+#include <stdlib.h>
+
+
+
 
 using namespace std;
 
@@ -63,6 +69,7 @@ struct Node {
         prev = nullptr;
     }
 };
+struct termios orig_termios;
 
 // funciones
 void printMatrix(string matrix[MAX_HEIGHT][MAX_WIDTH])
@@ -104,10 +111,30 @@ void cleanConsole()
     cout << "\x1b[2J\033[H" << flush;
 }
 
+//Captura caracteres 
+void disableRawMode() {
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+void enableRawMode() {
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disableRawMode); // Restaura la terminal automáticamente al salir
+
+    struct termios raw = orig_termios;
+    // Apagar modo canónico (ICANON) y eco (ECHO)
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+    
+    // Configuración clave para no bloquear el bucle:
+    raw.c_cc[VMIN] = 0;   // Número mínimo de bytes para leer = 0
+    raw.c_cc[VTIME] = 0; // Tiempo de espera en décimas de segundo (0 = retorna inmediato)
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
 // inicio programa
 int main()
 {
-
+    enableRawMode();
     cout << "\033[?1049h\033[?25l";
     cleanConsole();
     
@@ -138,9 +165,19 @@ int main()
 
     while (true)
     {
+        //lectura de caracteres 
+        char c = '\0';
+        if (read(STDIN_FILENO, &c, 1) == 1) {
+            if (c == 'q') break; // Salir con 'q'
+            if (c == 'j') actualDirection= actualDirection->prev;
+            if (c == 'k') actualDirection= actualDirection->next;
+        }
+        
+        //renderizado de la matriz
         cleanConsole();
         fillMatrix(matrix);
         
+        //control de dirección de la serpiente
         snake.head = snake.head.move(actualDirection->direction);
         if (snake.head.isOutOfLimit()){
             cout << "GAME OVER"<< endl;
@@ -154,18 +191,6 @@ int main()
         cout << snake.head.X << " " << snake.head.Y << flush;
         this_thread::sleep_for(chrono::milliseconds(500));
     }
-    /*
-    while (true)
-    {
-        for (size_t i = 0; i < 4; i++)
-        {
-            cout << "." << flush;
-            this_thread::sleep_for(chrono::milliseconds(1000));
-        }
-        this_thread::sleep_for(chrono::milliseconds(1000));
-        cleanConsole();
-    }
-    */
-
+    
     return 0;
 }
