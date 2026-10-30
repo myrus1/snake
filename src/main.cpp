@@ -38,8 +38,6 @@ struct Vector
     }
 };
 
-const Vector UP = {0, -1};
-
 struct Snake
 {
     Vector head;
@@ -52,6 +50,18 @@ map<Direction, Vector> movement = {
     {Direction::DOWN, {0, 1}},
     {Direction::LEFT, {-1, 0}},
     {Direction::RIGHT, {1, 0}},
+};
+
+struct Node {
+   Vector direction;
+   struct Node *next;
+   struct Node *prev;
+
+   Node(Vector dir) {
+        direction = dir;
+        next = nullptr;
+        prev = nullptr;
+    }
 };
 
 // funciones
@@ -100,6 +110,25 @@ int main()
 
     cout << "\033[?1049h\033[?25l";
     cleanConsole();
+    
+    //inicializacion dial direcciones 
+    Direction direction;
+    Node* upDir = new Node(movement[Direction::UP]);
+    Node* rightDir = new Node(movement[Direction::RIGHT]);
+    Node* downDir = new Node(movement[Direction::DOWN]);
+    Node* leftDir = new Node(movement[Direction::LEFT]);
+    
+    upDir->next = rightDir;
+    rightDir->next = downDir;
+    downDir->next = leftDir;
+    leftDir->next = upDir;
+    
+    upDir->prev = leftDir;
+    rightDir->prev = upDir;
+    downDir->prev = rightDir;
+    leftDir->prev = downDir;
+    
+    Node* actualDirection=upDir;
 
     string matrix[MAX_HEIGHT][MAX_WIDTH];
     // Vector food = createRandomFood();
@@ -112,7 +141,7 @@ int main()
         cleanConsole();
         fillMatrix(matrix);
         
-        snake.head = snake.head.move(UP);
+        snake.head = snake.head.move(actualDirection->direction);
         if (snake.head.isOutOfLimit()){
             cout << "GAME OVER"<< endl;
             break;
@@ -122,7 +151,7 @@ int main()
         matrix[food.Y][food.X] = "@ "; // Orden correcto: Fila (Y), Columna (X)
 
         printMatrix(matrix);
-        cout << snake.head.X << snake.head.Y << flush;
+        cout << snake.head.X << " " << snake.head.Y << flush;
         this_thread::sleep_for(chrono::milliseconds(500));
     }
     /*
